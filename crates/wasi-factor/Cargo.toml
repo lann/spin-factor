@@ -1,0 +1,9 @@
+[package]
+name = "wasi-factor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wasmtime-wasi = { workspace = true, features = ["preview1"] }
+
+spin-factors = { path = "../.." }

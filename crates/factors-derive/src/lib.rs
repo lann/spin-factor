@@ -47,7 +47,7 @@ fn expand_factors(input: &DeriveInput) -> syn::Result<TokenStream> {
         factor_types.push(&field.ty);
     }
 
-    let factors_crate = format_ident!("spin_factor");
+    let factors_crate = format_ident!("spin_factors");
     let factors_path = quote!(::#factors_crate);
     let Factor = quote!(#factors_path::Factor);
     let Result = quote!(#factors_path::Result);
@@ -78,7 +78,7 @@ fn expand_factors(input: &DeriveInput) -> syn::Result<TokenStream> {
                 linker: &mut #wasmtime::Linker<#data_name>
             ) -> #Result<()> {
                 #(
-                    <#factor_types as #factors_path::Factor>::add_to_module_linker::<#name>(
+                    <#factor_types as #Factor>::add_to_module_linker::<#name>(
                         linker, |data| &mut data.#factor_names)?;
                 )*
                 Ok(())
@@ -90,7 +90,7 @@ fn expand_factors(input: &DeriveInput) -> syn::Result<TokenStream> {
                 };
                 #(
                     builders.#factor_names = Some(
-                        <#factor_types as #Factor>::InstanceBuilder::prepare::<#name>(
+                        #factors_path::FactorBuilder::<#factor_types>::prepare::<#name>(
                             &self.#factor_names,
                             #factors_path::PrepareContext::new(&mut builders),
                         )?
@@ -98,59 +98,50 @@ fn expand_factors(input: &DeriveInput) -> syn::Result<TokenStream> {
                 )*
                 Ok(#data_name {
                     #(
-                        #factor_names: #factors_path::InstanceBuilder::<#factor_types>::build(
+                        #factor_names: #factors_path::FactorBuilder::<#factor_types>::build(
                             builders.#factor_names.unwrap()
                         )?,
                     )*
                 })
             }
+
         }
 
         impl #factors_path::SpinFactors for #name {
-            type InstanceBuilders = #builders_name;
-            type InstanceData = #data_name;
+            type Builders = #builders_name;
+            type Data = #data_name;
 
-            fn data_getter<T: #factors_path::Factor>(
-            ) -> Option<for<'a> fn(&'a mut Self::InstanceData) -> &'a mut T::InstanceData> {
+            unsafe fn factor_builder_offset<T: #Factor>() -> Option<usize> {
                 let type_id = #TypeId::of::<T>();
                 #(
-                    fn #factor_names(data: &mut #data_name) -> &mut <#factor_types as #factors_path::Factor>::InstanceData {
-                        &mut data.#factor_names
-                    }
                     if type_id == #TypeId::of::<#factor_types>() {
-                        let ptr = #factor_names as *const ();
-                        return Some(unsafe { std::mem::transmute(ptr) });
+                        return Some(std::mem::offset_of!(Self::Builders, #factor_names));
                     }
                 )*
                 None
             }
 
-            fn builder_mut<T: #Factor>(
-                builders: &mut Self::InstanceBuilders,
-            ) -> Option<Option<&mut T::InstanceBuilder>> {
+            unsafe fn factor_data_offset<T: #Factor>() -> Option<usize> {
                 let type_id = #TypeId::of::<T>();
                 #(
                     if type_id == #TypeId::of::<#factor_types>() {
-                        return Some(
-                            builders.#factor_names.as_mut().map(|builder| {
-                                unsafe { std::mem::transmute(builder) }
-                            })
-                        );
+                        return Some(std::mem::offset_of!(Self::Data, #factor_names));
                     }
                 )*
                 None
+
             }
         }
 
         #vis struct #builders_name {
             #(
-                #factor_names: Option<<#factor_types as #Factor>::InstanceBuilder>,
+                #factor_names: Option<<#factor_types as #Factor>::Builder>,
             )*
         }
 
         #vis struct #data_name {
             #(
-                #factor_names: <#factor_types as #Factor>::InstanceData,
+                #factor_names: <#factor_types as #Factor>::Data,
             )*
         }
     })

@@ -1,0 +1,13 @@
+[package]
+name = "outbound-http-factor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+ref-cast = "1.0"
+wasmtime-wasi = { workspace = true }
+wasmtime-wasi-http = { workspace = true }
+
+spin-factors = { path = "../.." }
+wasi-factor = { path = "../wasi-factor" }
