@@ -5,9 +5,14 @@ use syn::{parse_macro_input, Data, DeriveInput, Error};
 #[proc_macro_derive(SpinFactors)]
 pub fn derive_factors(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
-    expand_factors(&input)
-        .unwrap_or_else(|err| err.into_compile_error())
-        .into()
+    let expanded = expand_factors(&input).unwrap_or_else(|err| err.into_compile_error());
+
+    #[cfg(feature = "expander")]
+    let expanded = expander::Expander::new("factors")
+        .write_to_out_dir(expanded)
+        .unwrap();
+
+    expanded.into()
 }
 
 #[allow(non_snake_case)]
@@ -15,8 +20,8 @@ fn expand_factors(input: &DeriveInput) -> syn::Result<TokenStream> {
     let name = &input.ident;
     let vis = &input.vis;
 
-    let builders_name = format_ident!("{name}_Builders");
-    let data_name = format_ident!("{name}_Data");
+    let builders_name = format_ident!("{name}Builders");
+    let data_name = format_ident!("{name}Data");
 
     if !input.generics.params.is_empty() {
         return Err(Error::new_spanned(
@@ -56,30 +61,30 @@ fn expand_factors(input: &DeriveInput) -> syn::Result<TokenStream> {
 
     Ok(quote! {
         impl #name {
-            pub fn new(
-                #( #factor_names: #factor_types, )*
-            ) -> Self {
-                Self {
-                    #( #factor_names, )*
-                }
-            }
-
-            pub fn add_to_linker(
+            pub fn init(
                 linker: &mut #wasmtime::component::Linker<#data_name>
             ) -> #Result<()> {
                 #(
-                    <#factor_types as #Factor>::add_to_linker::<#name>(
-                        linker, |data| &mut data.#factor_names)?;
+                    <#factor_types as #Factor>::init(
+                        #factors_path::InitContext::<Self, #factor_types>::new(
+                            linker,
+                            |data| &mut data.#factor_names,
+                        )
+                    )?;
                 )*
                 Ok(())
             }
 
-            pub fn add_to_module_linker(
+            pub fn module_init(
                 linker: &mut #wasmtime::Linker<#data_name>
             ) -> #Result<()> {
                 #(
-                    <#factor_types as #Factor>::add_to_module_linker::<#name>(
-                        linker, |data| &mut data.#factor_names)?;
+                    <#factor_types as #Factor>::module_init::<Self>(
+                        #factors_path::ModuleInitContext::<Self, #factor_types>::new(
+                            linker,
+                            |data| &mut data.#factor_names,
+                        )
+                    )?;
                 )*
                 Ok(())
             }
@@ -135,13 +140,13 @@ fn expand_factors(input: &DeriveInput) -> syn::Result<TokenStream> {
 
         #vis struct #builders_name {
             #(
-                #factor_names: Option<<#factor_types as #Factor>::Builder>,
+                pub #factor_names: Option<<#factor_types as #Factor>::Builder>,
             )*
         }
 
         #vis struct #data_name {
             #(
-                #factor_names: <#factor_types as #Factor>::Data,
+                pub #factor_names: <#factor_types as #Factor>::Data,
             )*
         }
     })

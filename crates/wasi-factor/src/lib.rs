@@ -1,6 +1,6 @@
 pub mod preview1;
 
-use spin_factors::{Factor, FactorBuilder, Linker, PrepareContext, Result, SpinFactors};
+use spin_factors::{Factor, FactorBuilder, InitContext, PrepareContext, Result, SpinFactors};
 use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
 
 pub struct WasiFactor;
@@ -9,40 +9,35 @@ impl Factor for WasiFactor {
     type Builder = Builder;
     type Data = Data;
 
-    fn add_to_linker<Factors: SpinFactors>(
-        linker: &mut Linker<Factors>,
-        get: fn(&mut Factors::Data) -> &mut Self::Data,
-    ) -> Result<()> {
+    fn init<Factors: SpinFactors>(mut ctx: InitContext<Factors, Self>) -> Result<()> {
         use wasmtime_wasi::bindings;
-        let (l, closure) = (linker, get);
-        // Copied from `wasmtime_wasi::add_to_linker_async`
-        bindings::clocks::wall_clock::add_to_linker_get_host(l, closure)?;
-        bindings::clocks::monotonic_clock::add_to_linker_get_host(l, closure)?;
-        bindings::filesystem::types::add_to_linker_get_host(l, closure)?;
-        bindings::filesystem::preopens::add_to_linker_get_host(l, closure)?;
-        bindings::io::error::add_to_linker_get_host(l, closure)?;
-        bindings::io::poll::add_to_linker_get_host(l, closure)?;
-        bindings::io::streams::add_to_linker_get_host(l, closure)?;
-        bindings::random::random::add_to_linker_get_host(l, closure)?;
-        bindings::random::insecure::add_to_linker_get_host(l, closure)?;
-        bindings::random::insecure_seed::add_to_linker_get_host(l, closure)?;
-        bindings::cli::exit::add_to_linker_get_host(l, closure)?;
-        bindings::cli::environment::add_to_linker_get_host(l, closure)?;
-        bindings::cli::stdin::add_to_linker_get_host(l, closure)?;
-        bindings::cli::stdout::add_to_linker_get_host(l, closure)?;
-        bindings::cli::stderr::add_to_linker_get_host(l, closure)?;
-        bindings::cli::terminal_input::add_to_linker_get_host(l, closure)?;
-        bindings::cli::terminal_output::add_to_linker_get_host(l, closure)?;
-        bindings::cli::terminal_stdin::add_to_linker_get_host(l, closure)?;
-        bindings::cli::terminal_stdout::add_to_linker_get_host(l, closure)?;
-        bindings::cli::terminal_stderr::add_to_linker_get_host(l, closure)?;
-        bindings::sockets::tcp::add_to_linker_get_host(l, closure)?;
-        bindings::sockets::tcp_create_socket::add_to_linker_get_host(l, closure)?;
-        bindings::sockets::udp::add_to_linker_get_host(l, closure)?;
-        bindings::sockets::udp_create_socket::add_to_linker_get_host(l, closure)?;
-        bindings::sockets::instance_network::add_to_linker_get_host(l, closure)?;
-        bindings::sockets::network::add_to_linker_get_host(l, closure)?;
-        bindings::sockets::ip_name_lookup::add_to_linker_get_host(l, closure)?;
+        ctx.link_bindings(bindings::clocks::wall_clock::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::clocks::monotonic_clock::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::filesystem::types::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::filesystem::preopens::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::io::error::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::io::poll::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::io::streams::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::random::random::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::random::insecure::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::random::insecure_seed::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::exit::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::environment::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::stdin::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::stdout::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::stderr::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::terminal_input::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::terminal_output::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::terminal_stdin::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::terminal_stdout::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::cli::terminal_stderr::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::sockets::tcp::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::sockets::tcp_create_socket::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::sockets::udp::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::sockets::udp_create_socket::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::sockets::instance_network::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::sockets::network::add_to_linker_get_host)?;
+        ctx.link_bindings(bindings::sockets::ip_name_lookup::add_to_linker_get_host)?;
         Ok(())
     }
 }

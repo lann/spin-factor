@@ -3,13 +3,18 @@ name = "spin-factors"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+derive-expander = ["spin-factors-derive/expander"]
+
 [dependencies]
+anyhow = "1.0"
 spin-factors-derive = { path = "crates/factors-derive" }
 wasmtime = { workspace = true }
 
 [dev-dependencies]
-wasi-factor = { path = "crates/wasi-factor" }
 outbound-http-factor = { path = "crates/outbound-http-factor" }
+outbound-networking-factor = { path = "crates/outbound-networking-factor" }
+wasi-factor = { path = "crates/wasi-factor" }
 
 [workspace]
 members = ["crates/*"]

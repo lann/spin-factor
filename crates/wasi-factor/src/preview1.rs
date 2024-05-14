@@ -1,4 +1,4 @@
-use spin_factors::{Factor, FactorBuilder, ModuleLinker, PrepareContext, Result, SpinFactors};
+use spin_factors::{Factor, FactorBuilder, ModuleInitContext, PrepareContext, Result, SpinFactors};
 use wasmtime_wasi::{preview1::WasiP1Ctx, WasiCtxBuilder};
 
 pub struct WasiPreview1Factor;
@@ -7,11 +7,8 @@ impl Factor for WasiPreview1Factor {
     type Builder = Builder;
     type Data = WasiP1Ctx;
 
-    fn add_to_module_linker<Factors: SpinFactors>(
-        linker: &mut ModuleLinker<Factors>,
-        get: fn(&mut Factors::Data) -> &mut Self::Data,
-    ) -> Result<()> {
-        wasmtime_wasi::preview1::add_to_linker_async(linker, get)
+    fn module_init<Factors: SpinFactors>(mut ctx: ModuleInitContext<Factors, Self>) -> Result<()> {
+        ctx.link_bindings(wasmtime_wasi::preview1::add_to_linker_async)
     }
 }
 

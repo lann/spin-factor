@@ -14,20 +14,46 @@ pub trait Factor: Any + Sized {
     type Builder: FactorBuilder<Self>;
     type Data;
 
-    fn add_to_linker<Factors: SpinFactors>(
-        linker: &mut Linker<Factors>,
-        get: fn(&mut Factors::Data) -> &mut Self::Data,
-    ) -> Result<()> {
-        (_, _) = (linker, get);
+    fn init<Factors: SpinFactors>(mut ctx: InitContext<Factors, Self>) -> Result<()> {
+        _ = &mut ctx;
         Ok(())
     }
 
-    fn add_to_module_linker<Factors: SpinFactors>(
-        linker: &mut ModuleLinker<Factors>,
-        get: fn(&mut Factors::Data) -> &mut Self::Data,
-    ) -> Result<()> {
-        (_, _) = (linker, get);
+    fn module_init<Factors: SpinFactors>(mut ctx: ModuleInitContext<Factors, Self>) -> Result<()> {
+        _ = &mut ctx;
         Ok(())
+    }
+}
+
+pub struct FactorInitContext<'a, Factors: SpinFactors, Fact: Factor, Linker> {
+    linker: &'a mut Linker,
+    get_data: fn(&mut Factors::Data) -> &mut Fact::Data,
+}
+
+pub type InitContext<'a, Factors, Fact> = FactorInitContext<'a, Factors, Fact, Linker<Factors>>;
+
+pub type ModuleInitContext<'a, Factors, Fact> =
+    FactorInitContext<'a, Factors, Fact, ModuleLinker<Factors>>;
+
+impl<'a, Factors: SpinFactors, Fact: Factor, Linker> FactorInitContext<'a, Factors, Fact, Linker> {
+    #[doc(hidden)]
+    pub fn new(
+        linker: &'a mut Linker,
+        get_data: fn(&mut Factors::Data) -> &mut Fact::Data,
+    ) -> Self {
+        Self { linker, get_data }
+    }
+
+    pub fn linker(&mut self) -> &mut Linker {
+        self.linker
+    }
+
+    pub fn link_bindings(
+        &mut self,
+        add_to_linker: impl Fn(&mut Linker, fn(&mut Factors::Data) -> &mut Fact::Data) -> Result<()>,
+    ) -> Result<()>
+where {
+        add_to_linker(self.linker, self.get_data)
     }
 }
 
