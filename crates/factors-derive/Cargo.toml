@@ -1,5 +1,5 @@
 [package]
-name = "spin-factor-derive"
+name = "spin-factors-derive"
 version = "0.1.0"
 edition = "2021"
 
